@@ -2,10 +2,7 @@ import exception.FileNameAlreadyExistsException;
 import files.File;
 import files.FileStorage;
 import org.testng.Assert;
-import org.testng.annotations.BeforeGroups;
-import org.testng.annotations.BeforeTest;
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
+import org.testng.annotations.*;
 
 import java.lang.reflect.Field;
 
@@ -30,6 +27,11 @@ public class FileStorageTest {
     public final int ZERO = 0;
 
     public FileStorage storage;
+    private final Object[][] files = new Object[][] {
+                {new File(REPEATED_STRING, CONTENT_STRING)},
+                {new File(SPACE_STRING, WRONG_SIZE_CONTENT_STRING)},
+                {new File(FILE_PATH_STRING, CONTENT_STRING)}
+        };
 
     @BeforeTest
     public void setUp() {
@@ -42,6 +44,11 @@ public class FileStorageTest {
         storage = new FileStorage();
     }
 
+    @BeforeGroups(groups = "testWriteFunctions")
+    public void setNewStorageWrite() {
+        storage = new FileStorage(13);
+    }
+
     /* ПРОВАЙДЕРЫ */
     @DataProvider(name = "testSizeData")
     public Object[][] newData() {
@@ -50,14 +57,12 @@ public class FileStorageTest {
 
     @DataProvider(name = "testFilesForStorage")
     public Object[][] newFiles() {
-        return new Object[][] { {new File(REPEATED_STRING, CONTENT_STRING)},
-                {new File(SPACE_STRING, WRONG_SIZE_CONTENT_STRING)},
-                {new File(FILE_PATH_STRING, CONTENT_STRING)} };
+        return files;
     }
 
     @DataProvider(name = "testFilesForDelete")
     public Object[][] filesForDelete() {
-        return new Object[][] { {REPEATED_STRING}, {TIC_TOC_TOE_STRING}};
+        return new Object[][] { {REPEATED_STRING}};
     }
 
     @DataProvider(name = "nullExceptionTest")
@@ -87,7 +92,7 @@ public class FileStorageTest {
     }
 
     /* Тестирование записи файла */
-    @Test (dataProvider = "testFilesForStorage", groups = "testExistFunction")
+    @Test (dataProvider = "testFilesForStorage", groups = "testWriteFunctions")
     public void testWrite(File file) throws FileNameAlreadyExistsException {
         Assert.assertTrue(storage.write(file));
     }
@@ -99,10 +104,10 @@ public class FileStorageTest {
     }
 
     /* Тестирование проверки существования файла */
-    @Test (dataProvider = "testFilesForStorage", groups = "testExistFunction")
+    @Test (dataProvider = "testFilesForStorage", groups = "testWriteFunctions", dependsOnMethods = "testWrite")
     public void testIsExists(File file) {
         String name = file.getFilename();
-        Assert.assertFalse(storage.isExists(name));
+        Assert.assertTrue(storage.isExists(name));
         try {
             storage.write(file);
         } catch (FileNameAlreadyExistsException e) {
@@ -111,7 +116,7 @@ public class FileStorageTest {
     }
 
     /* Тестирование удаления файла */
-    @Test (dataProvider = "testFilesForDelete", dependsOnMethods = "testFileStorage")
+    @Test (dataProvider = "testFilesForDelete", dependsOnMethods = {"testFileStorage", "testIsExists"})
     public void testDelete(String fileName) {
         Assert.assertTrue(storage.delete(fileName));
     }
@@ -125,8 +130,20 @@ public class FileStorageTest {
     }
 
     /* Тестирование получения файла */
-    @Test (dataProvider = "testFilesForStorage")
+    @Test (dataProvider = "testFilesForStorage", dependsOnMethods = "testWrite")
     public void testGetFile(File file) {
         Assert.assertEquals(storage.getFile(file.getFilename()), file);
+    }
+
+    // Тестирование удаления файла, которого нет в хранилище
+    @Test
+    public void testDeleteFileNotInStorage() {
+        Assert.assertFalse(storage.delete(TIC_TOC_TOE_STRING));
+    }
+
+    // Проверка существования несуществующего файла в хранилище
+    @Test
+    public void testIsExistsNotExists() {
+        Assert.assertFalse(storage.isExists(TIC_TOC_TOE_STRING));
     }
 }

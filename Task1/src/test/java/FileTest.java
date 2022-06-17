@@ -3,6 +3,8 @@ import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import java.lang.reflect.Field;
+
 public class FileTest {
     public final String SIZE_EXCEPTION = "Wrong size";
     public final String NAME_EXCEPTION = "Wrong name";
@@ -30,5 +32,20 @@ public class FileTest {
     @Test (dataProvider = "filesData")
     public void testGetFilename(File newFile, String name, String content) {
         Assert.assertEquals(newFile.getFilename(), name, NAME_EXCEPTION);
+    }
+
+    // Тестирование корректности определения расширения файла в конструкторе
+    @Test(dataProvider = "filesData")
+    public void testExtensionDetecting(File file, String name, String content) {
+        String extension = name.split("\\.")[name.split("\\.").length - 1];
+        try {
+
+            Field field = File.class.getDeclaredField("extension");
+            field.setAccessible(true);
+            Assert.assertEquals(field.get(file), extension);
+
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            e.printStackTrace();
+        }
     }
 }
